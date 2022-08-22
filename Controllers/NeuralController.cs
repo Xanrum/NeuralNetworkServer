@@ -8,7 +8,7 @@ namespace NeuralNetworkServer.Controllers;
 public class NeuralController : ControllerBase
 {
 
-    private static readonly ConcurrentDictionary<string, double[]> InputsCache = new();
+    private static readonly ConcurrentDictionary<long, double[]> InputsCache = new();
 
     [HttpPost("Load")]
     public void Load(LoadInputsRequest request)
@@ -20,11 +20,32 @@ public class NeuralController : ControllerBase
     }
     
     [HttpPost("Calc")]
-    public CalcResponse Calc(CalcRequest request)
+    public CalcResponse Calc()
     {
+        Request.Body.Position = 0;
+        var binaryReader = new BinaryReader(Request.Body);
+        var modelLength = binaryReader.ReadByte();
+        var model = new int[modelLength];
+        for (var i = 0; i < modelLength; i++)
+        {
+            model[i] = binaryReader.ReadInt32();
+        }
+        var inputsLength = binaryReader.ReadInt32();
+        var requestInputs = new long[modelLength];
+        for (var i = 0; i < inputsLength; i++)
+        {
+            requestInputs[i] = binaryReader.ReadInt64();
+        }
+        
+        var synapseLength = binaryReader.ReadInt32();
+        var synapses = new double[synapseLength];
+        for (var i = 0; i < inputsLength; i++)
+        {
+            synapses[i] = binaryReader.ReadDouble();
+        }
         var inputs = new List<double[]>();
-        var unknownInputs = new List<string>();
-        foreach (var s in request.Input)
+        var unknownInputs = new List<long>();
+        foreach (var s in requestInputs)
         {
             if (InputsCache.TryGetValue(s, out var input))
             {
@@ -41,11 +62,11 @@ public class NeuralController : ControllerBase
                 UnkownInputs = unknownInputs,
                 Outputs = Array.Empty<double[]>()
             };
-        var calcer = new NeuralNetworkCalcer(request.Model);
+        var calcer = new NeuralNetworkCalcer(model);
         var outputs = new double[inputs.Count][];
         for (var i = 0; i < inputs.Count; i++)
         {
-            outputs[i] = calcer.Calc(inputs[i], request.Synapses);
+            outputs[i] = calcer.Calc(inputs[i], synapses);
         }
         return new()
         {

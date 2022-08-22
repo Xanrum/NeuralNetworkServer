@@ -4,6 +4,6 @@ public class LoadInputsRequest
 }
 
 public class LoadInputsRequestItem {
-    public string Key { get; set; }
+    public long Key { get; set; }
     public double[] Inputs { get; set; }
 }
