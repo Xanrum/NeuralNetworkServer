@@ -10,7 +10,7 @@ public class NeuralController : ControllerBase
 
     private static readonly ConcurrentDictionary<string, double[]> InputsCache = new();
 
-    [HttpPost(Name = "Load")]
+    [HttpPost("Load")]
     public void Load(LoadInputsRequest request)
     {
         foreach (var item in request.Data)
@@ -19,7 +19,7 @@ public class NeuralController : ControllerBase
         }
     }
     
-    [HttpPost(Name = "Calc")]
+    [HttpPost("Calc")]
     public CalcResponse Calc(CalcRequest request)
     {
         var inputs = new List<double[]>();
