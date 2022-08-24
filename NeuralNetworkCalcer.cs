@@ -12,9 +12,9 @@ public class NeuralNetworkCalcer
     public double[] Calc(double[] inputs, int startInput, double[] synapses)
     {
         var max = _model.Max();
-        var prev = new double[max];
-        Array.Copy(inputs, startInput, prev, 0, _model[0]);
-        var next = new double[max];
+        Span<double> prev = stackalloc double[max];
+        new Span<double>(inputs, startInput, _model[0]).CopyTo(prev);
+        Span<double> next = stackalloc double[max];
         var sinapsIndex = 0;
         for (var i = 1; i < _model.Length; i++)
         {
@@ -22,16 +22,20 @@ public class NeuralNetworkCalcer
             for (var i1 = 0; i1 < len; i1++)
             {
                 var sum = 0d;
-                foreach (var p in prev)
+                for (var i2 = 0; i2 < _model[i-1]; i2++)
                 {
+                    var p = prev[i2];
                     sum += p * synapses[sinapsIndex];
                     sinapsIndex++;
                 }
                 next[i1] = Math.Tanh(sum);
             }
-            (prev, next) = (next, prev);
+            var tmp = prev;
+            prev = next;
+            next = tmp;
         }
-        Array.Resize(ref prev, _model.Last());
-        return  prev;
+        var result = new double[_model.Last()];
+        prev.Slice(0, _model.Last()).CopyTo(result);
+        return  result;
     }
 }
