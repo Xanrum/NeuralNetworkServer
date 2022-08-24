@@ -9,24 +9,24 @@ public class NeuralNetworkCalcer
     private readonly int[] _model;
     
 
-    public double[] Calc(double[] inputs, int startInput, double[] synapses)
+    public float[] Calc(float[] inputs, int startInput, float[] synapses)
     {
         
-        var prev = new Span<double>(inputs, startInput, _model[0]).ToArray();
+        var prev = new Span<float>(inputs, startInput, _model[0]).ToArray();
         var sinapsIndex = 0;
         for (var i = 1; i < _model.Length; i++)
         {
-            var next = new double[_model[i]];
+            var next = new float[_model[i]];
             var len = _model[i];
             for (var i1 = 0; i1 < len; i1++)
             {
-                var sum = 0d;
+                var sum = 0f;
                 foreach (var p in prev)
                 {
                     sum += p * synapses[sinapsIndex];
                     sinapsIndex++;
                 }
-                next[i1] = Math.Tanh(sum);
+                next[i1] = MathF.Tanh(sum);
             }
             prev = next;
         }

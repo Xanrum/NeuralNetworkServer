@@ -8,12 +8,12 @@ namespace NeuralNetworkServer.Controllers;
 public class NeuralController : ControllerBase
 {
 
-    private static readonly ConcurrentDictionary<long, (double[] data, int[] indexes)> InputsCache = new();
+    private static readonly ConcurrentDictionary<long, (float[] data, int[] indexes)> InputsCache = new();
 
     [HttpPost("Load")]
     public void Load(LoadInputsRequest request)
     {
-            InputsCache[request.Key] = (request.Data, request.Indexes);
+            InputsCache[request.Key] = (request.Data.Select(p => (float)p).ToArray(), request.Indexes);
     }
     
     [HttpPost("Calc")]
@@ -34,14 +34,14 @@ public class NeuralController : ControllerBase
         var inputKey = binaryReader.ReadInt64();
         
         var synapseLength = binaryReader.ReadInt32();
-        var synapses = new double[synapseLength];
+        var synapses = new float[synapseLength];
         for (var i = 0; i < synapseLength; i++)
         {
-            synapses[i] = binaryReader.ReadDouble();
+            synapses[i] = (float)binaryReader.ReadDouble();
         }
         var inputs = InputsCache[inputKey];
         var calcer = new NeuralNetworkCalcer(model);
-        var outputs = new double[inputs.indexes.Length][];
+        var outputs = new float[inputs.indexes.Length][];
         for (var i = 0; i < inputs.indexes.Length; i++)
         {
             outputs[i] = calcer.Calc(inputs.data, inputs.indexes[i], synapses);
