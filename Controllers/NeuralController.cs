@@ -8,15 +8,12 @@ namespace NeuralNetworkServer.Controllers;
 public class NeuralController : ControllerBase
 {
 
-    private static readonly ConcurrentDictionary<long, double[]> InputsCache = new();
+    private static readonly ConcurrentDictionary<long, (double[] data, int[] indexes)> InputsCache = new();
 
     [HttpPost("Load")]
     public void Load(LoadInputsRequest request)
     {
-        foreach (var item in request.Data)
-        {
-            InputsCache[item.Key] = item.Inputs;
-        }
+            InputsCache[request.Key] = (request.Data, request.Indexes);
     }
     
     [HttpPost("Calc")]
@@ -34,12 +31,7 @@ public class NeuralController : ControllerBase
         {
             model[i] = binaryReader.ReadInt32();
         }
-        var inputsLength = binaryReader.ReadInt32();
-        var requestInputs = new long[inputsLength];
-        for (var i = 0; i < inputsLength; i++)
-        {
-            requestInputs[i] = binaryReader.ReadInt64();
-        }
+        var inputKey = binaryReader.ReadInt64();
         
         var synapseLength = binaryReader.ReadInt32();
         var synapses = new double[synapseLength];
@@ -47,34 +39,15 @@ public class NeuralController : ControllerBase
         {
             synapses[i] = binaryReader.ReadDouble();
         }
-        var inputs = new List<double[]>();
-        var unknownInputs = new List<long>();
-        foreach (var s in requestInputs)
-        {
-            if (InputsCache.TryGetValue(s, out var input))
-            {
-                inputs.Add(input);
-            }
-            else
-            {
-                unknownInputs.Add(s);
-            }
-        }
-        if (unknownInputs.Count != 0)
-            return new()
-            {
-                UnkownInputs = unknownInputs,
-                Outputs = Array.Empty<double[]>()
-            };
+        var inputs = InputsCache[inputKey];
         var calcer = new NeuralNetworkCalcer(model);
-        var outputs = new double[inputs.Count][];
-        for (var i = 0; i < inputs.Count; i++)
+        var outputs = new double[inputs.indexes.Length][];
+        for (var i = 0; i < inputs.indexes.Length; i++)
         {
-            outputs[i] = calcer.Calc(inputs[i], synapses);
+            outputs[i] = calcer.Calc(inputs.data, inputs.indexes[i], synapses);
         }
         return new()
         {
-            UnkownInputs = unknownInputs,
             Outputs = outputs
         };
     }

@@ -9,7 +9,7 @@ public class NeuralNetworkCalcer
     private readonly int[] _model;
     
 
-    public double[] Calc(double[] inputs, double[] synapses)
+    public double[] Calc(double[] inputs, int startInput, double[] synapses)
     {
         var prev = inputs;
         var sinapsIndex = 0;
