@@ -11,7 +11,8 @@ public class NeuralNetworkCalcer
 
     public double[] Calc(double[] inputs, int startInput, double[] synapses)
     {
-        var prev = inputs;
+        
+        var prev = new Span<double>(inputs, startInput, _model[0]).ToArray();
         var sinapsIndex = 0;
         for (var i = 1; i < _model.Length; i++)
         {
