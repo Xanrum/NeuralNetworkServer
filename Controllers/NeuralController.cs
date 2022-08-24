@@ -20,18 +20,22 @@ public class NeuralController : ControllerBase
     }
     
     [HttpPost("Calc")]
-    public CalcResponse Calc()
+    public async Task<CalcResponse> Calc()
     {
+        Request.EnableBuffering();
         Request.Body.Position = 0;
-        var binaryReader = new BinaryReader(Request.Body);
-        var modelLength = binaryReader.ReadByte();
+        var ms = new MemoryStream();
+        await Request.Body.CopyToAsync(ms);
+        ms.Position = 0;
+        var binaryReader = new BinaryReader(ms);
+        var modelLength = binaryReader.ReadInt32();
         var model = new int[modelLength];
         for (var i = 0; i < modelLength; i++)
         {
             model[i] = binaryReader.ReadInt32();
         }
         var inputsLength = binaryReader.ReadInt32();
-        var requestInputs = new long[modelLength];
+        var requestInputs = new long[inputsLength];
         for (var i = 0; i < inputsLength; i++)
         {
             requestInputs[i] = binaryReader.ReadInt64();
@@ -39,7 +43,7 @@ public class NeuralController : ControllerBase
         
         var synapseLength = binaryReader.ReadInt32();
         var synapses = new double[synapseLength];
-        for (var i = 0; i < inputsLength; i++)
+        for (var i = 0; i < synapseLength; i++)
         {
             synapses[i] = binaryReader.ReadDouble();
         }
