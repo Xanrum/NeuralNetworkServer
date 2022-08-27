@@ -42,10 +42,25 @@ public class NeuralController : ControllerBase
         var inputs = InputsCache[inputKey];
         var calcer = new NeuralNetworkCalcer(model);
         var outputs = new double[inputs.indexes.Length][];
-        for (var i = 0; i < inputs.indexes.Length; i++)
+        var outputsPerTask = 1000;
+        var batchCount = inputs.indexes.Length / outputsPerTask;
+        var tasks = new List<Task>();
+        for (var i = 0; i < batchCount; i++)
+        {
+            var batchStart = outputsPerTask * i;
+            tasks.Add(Task.Run(() => {
+                for (int j = 0; j < outputsPerTask; j++)
+                {
+                    var index = batchStart + j;
+                    outputs[index] = calcer.Calc(inputs.data, inputs.indexes[index], synapses);
+                }
+            }));
+        }
+        for (int i = outputsPerTask*batchCount; i < inputs.indexes.Length; i++)
         {
             outputs[i] = calcer.Calc(inputs.data, inputs.indexes[i], synapses);
         }
+        await Task.WhenAll(tasks);
         return new()
         {
             Outputs = outputs
