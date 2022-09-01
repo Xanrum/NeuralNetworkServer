@@ -28,20 +28,17 @@ public class NeuralNetworkCalcer
             {
                 var sum = 0f;
                 var fromVector = prevLen / vectorLength;
-                if (fromVector > 0)
+                for (var j = 0; j < fromVector; j++)
                 {
-                    for (int j = 0; j < fromVector; j++)
-                    {
-                        var prevVector = new Vector<float>(prev.Slice(vectorLength * j, vectorLength));
-                        var currentNeuronValues = new Vector<float>(new Span<float>(synapses, sinapsIndex, vectorLength));
-                        var dot = Vector.Dot(prevVector, currentNeuronValues);
-                        sum += dot;
-                        sinapsIndex += vectorLength;
-                    }
+                    var prevVector = new Vector<float>(prev.Slice(vectorLength * j, vectorLength));
+                    var currentNeuronValues = new Vector<float>(new Span<float>(synapses, sinapsIndex, vectorLength));
+                    var dot = Vector.Dot(prevVector, currentNeuronValues);
+                    sum += dot;
+                    sinapsIndex += vectorLength;
                 }
-                for (var i2 = fromVector * vectorLength; i2 < prevLen; i2++)
+                for (var j = fromVector * vectorLength; j < prevLen; j++)
                 {
-                    var p = prev[i2];
+                    var p = prev[j];
                     var k = p * synapses[sinapsIndex];
                     sum += k;
                     sinapsIndex++;
@@ -54,6 +51,6 @@ public class NeuralNetworkCalcer
         }
         var result = new float[_model.Last()];
         prev.Slice(0, _model.Last()).CopyTo(result);
-        return  result;
+        return result;
     }
 }
