@@ -16,6 +16,8 @@ public class NeuralController : ControllerBase
             InputsCache[request.Key] = (request.Data, request.Indexes);
     }
     
+    static NeuralNetworkCalcer calcer = new NeuralNetworkCalcer();
+    
     [HttpPost("Calc")]
     public async Task<CalcResponse> Calc()
     {
@@ -40,27 +42,7 @@ public class NeuralController : ControllerBase
             synapses[i] = (float)binaryReader.ReadDouble();
         }
         var inputs = InputsCache[inputKey];
-        var calcer = new NeuralNetworkCalcer(model);
-        var outputs = new float[inputs.indexes.Length][];
-        var outputsPerTask = 1000;
-        var batchCount = inputs.indexes.Length / outputsPerTask;
-        var tasks = new List<Task>();
-        for (var i = 0; i < batchCount; i++)
-        {
-            var batchStart = outputsPerTask * i;
-            tasks.Add(Task.Run(() => {
-                for (int j = 0; j < outputsPerTask; j++)
-                {
-                    var index = batchStart + j;
-                    outputs[index] = calcer.Calc(inputs.data, inputs.indexes[index], synapses);
-                }
-            }));
-        }
-        for (int i = outputsPerTask*batchCount; i < inputs.indexes.Length; i++)
-        {
-            outputs[i] = calcer.Calc(inputs.data, inputs.indexes[i], synapses);
-        }
-        await Task.WhenAll(tasks);
+        var outputs =  calcer.Calc(inputs.data, inputs.indexes, synapses, model);
         return new()
         {
             Outputs = outputs
