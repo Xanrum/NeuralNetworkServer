@@ -15,11 +15,12 @@ public class NeuralNetworkCalcer
         accelerator = context.CreateCudaAccelerator(0);
         
         Kernel = accelerator.LoadAutoGroupedStreamKernel(
-        (Index1D jobIndex, ArrayView<float> inputs, ArrayView<int> indexes, ArrayView<int> model, ArrayView<float> synapses, ArrayView<float> output, ArrayView<float> buffer) => {
-            var bufferOffset = jobIndex * buffer.Length / indexes.Length;
+        (Index1D jobIndex, ArrayView<float> inputs, ArrayView<int> indexes, ArrayView<int> model, ArrayView<float> synapses, ArrayView<float> output) => {
             var firstLevel = model[0];
             var startIndex = indexes[jobIndex];
-            for (int i = 0; i < firstLevel; i++) buffer[bufferOffset + i] = inputs[startIndex + i];
+            var prev = new float[300];
+            var next = new float[300];
+            for (int i = 0; i < firstLevel; i++) prev[i] = inputs[startIndex + i];
             var synapseIndex = 0;
             for (var i = 1; i < model.Length; i++)
             {
@@ -29,23 +30,23 @@ public class NeuralNetworkCalcer
                     var sum = 0f;
                     for (int k = 0; k < prevCount; k++)
                     {
-                        sum += buffer[bufferOffset + k] * synapses[synapseIndex];
+                        sum += prev[k] * synapses[synapseIndex];
                         synapseIndex++;
                     }
-                    buffer[bufferOffset+prevCount+j] = MathF.Tanh(sum);
+                    next[j] = MathF.Tanh(sum);
                 }
-                bufferOffset += prevCount;
+                (next, prev) = (prev, next);
             }
             var lastLevel = model[model.Length-1];
             for (int i = 0; i < lastLevel; i++)
             {
-                output[jobIndex * lastLevel + i] = buffer[bufferOffset+i];
+                output[jobIndex * lastLevel + i] = prev[i];
             }
         });
     }
 
     private Accelerator accelerator;
-    private Action<Index1D, ArrayView<float>, ArrayView<int>, ArrayView<int>, ArrayView<float>, ArrayView<float>, ArrayView<float>> Kernel;
+    private Action<Index1D, ArrayView<float>, ArrayView<int>, ArrayView<int>, ArrayView<float>, ArrayView<float>> Kernel;
 
 
     public float[][] Calc(float[] inputs, int[] indexes, float[] synapses, int[] model)
@@ -55,14 +56,13 @@ public class NeuralNetworkCalcer
         var deviceIndexes = accelerator.Allocate1D(indexes);
         var deviceSynapses = accelerator.Allocate1D(synapses);
         var deviceModel = accelerator.Allocate1D(model);
-        var deviceLayerBuffers = accelerator.Allocate1D<float>(model.Sum() * indexes.Length);
         var deviceOutput = accelerator.Allocate1D<float>(outCount * indexes.Length);
         
         // load / compile the kernel
      
         lock (accelerator)
         {
-            Kernel(indexes.Length, deviceInputs.View, deviceIndexes.View, deviceModel.View, deviceSynapses.View, deviceOutput.View, deviceLayerBuffers.View);
+            Kernel(indexes.Length, deviceInputs.View, deviceIndexes.View, deviceModel.View, deviceSynapses.View, deviceOutput.View);
             accelerator.Synchronize();
         }
         var res = deviceOutput.GetAsArray1D();
