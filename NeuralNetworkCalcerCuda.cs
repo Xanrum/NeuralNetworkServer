@@ -7,12 +7,13 @@ using System.Runtime.Intrinsics;
 
 namespace NeuralNetworkServer;
 
-public class NeuralNetworkCalcer
+public class NeuralNetworkCalcerCuda
 {
-    public NeuralNetworkCalcer()
+    public NeuralNetworkCalcerCuda()
     {
         Context context = Context.CreateDefault();
         accelerator = context.CreateCudaAccelerator(0);
+        Console.WriteLine(accelerator.Name);
         
         Kernel = accelerator.LoadAutoGroupedStreamKernel(
         (Index1D jobIndex, ArrayView<float> inputs, ArrayView<int> indexes, ArrayView<int> model, ArrayView<float> synapses, ArrayView<float> output) => {
