@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Runtime.Intrinsics;
 
 namespace NeuralNetworkServer;
 
@@ -11,46 +12,47 @@ public class NeuralNetworkCalcer
     private readonly int[] _model;
 
 
-    public double[] Calc(double[] inputs, int startInput, double[] synapses)
+    public float[] Calc(float[] inputs, int startInput, float[] synapses)
     {
         var max = _model.Max();
-        Span<double> prev = stackalloc double[max];
-        new Span<double>(inputs, startInput, _model[0]).CopyTo(prev);
-        Span<double> next = stackalloc double[max];
-        var prevVector = new Vector<double>(prev);
+        Span<float> prev = stackalloc float[max];
+        new Span<float>(inputs, startInput, _model[0]).CopyTo(prev);
+        Span<float> next = stackalloc float[max];
         var sinapsIndex = 0;
+        var vectorLength = Vector<float>.Count;
         for (var i = 1; i < _model.Length; i++)
         {
             var prevLen = _model[i - 1];
             var len = _model[i];
             for (var i1 = 0; i1 < len; i1++)
             {
-                if (prevLen > 4)
+                var sum = 0f;
+                var fromVector = prevLen / vectorLength;
+                if (fromVector > 0)
                 {
-                    var currentNeuronValues = new Span<double>(synapses, sinapsIndex, prevLen);
-                    var ss = new Vector<double>(currentNeuronValues);
-                    var mul = Vector.Multiply(prevVector, ss);
-                    var sum = Vector.Sum(mul);
-                    next[i1] = Math.Tanh(sum);
-                }
-                else
-                {
-                    var sum = 0d;
-                    for (var i2 = 0; i2 < _model[i-1]; i2++)
+                    for (int j = 0; j < fromVector; j++)
                     {
-                        var p = prev[i2];
-                        sum += p * synapses[sinapsIndex];
-                        sinapsIndex++;
+                        var prevVector = new Vector<float>(prev.Slice(vectorLength * j, vectorLength));
+                        var currentNeuronValues = new Vector<float>(new Span<float>(synapses, sinapsIndex, vectorLength));
+                        var dot = Vector.Dot(prevVector, currentNeuronValues);
+                        sum += dot;
+                        sinapsIndex += vectorLength;
                     }
-                    next[i1] = Math.Tanh(sum);
                 }
+                for (var i2 = fromVector * vectorLength; i2 < prevLen; i2++)
+                {
+                    var p = prev[i2];
+                    var k = p * synapses[sinapsIndex];
+                    sum += k;
+                    sinapsIndex++;
+                }
+                next[i1] = MathF.Tanh(sum);
             }
             var tmp = prev;
             prev = next;
-            prevVector = new(prev);
             next = tmp;
         }
-        var result = new double[_model.Last()];
+        var result = new float[_model.Last()];
         prev.Slice(0, _model.Last()).CopyTo(result);
         return  result;
     }
