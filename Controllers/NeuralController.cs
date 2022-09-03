@@ -43,7 +43,7 @@ public class NeuralController : ControllerBase
             synapses[i] = (float)binaryReader.ReadDouble();
         }
         var inputs = InputsCache[inputKey];
-        var outputs =  _calcer.Calc(inputs.data, inputs.indexes, synapses, model);
+        var outputs = await _calcer.Calc(inputs.data, inputs.indexes, synapses, model);
         return new()
         {
             Outputs = outputs
